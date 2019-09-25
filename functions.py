@@ -33,8 +33,10 @@ def RidgeRegression(design, data, test, _lambda=0):
     return beta, pred
 
 
-def VarianceBeta(design, _lambda=0):
-    return np.diag(np.linalg.inv(design.T.dot(design) + _lambda*np.eye((design.shape[1]))))
+def VarianceBeta(y, n):
+    n = np.size(y)
+    mean = (1/n ) * np.sum(y)
+    return (1/n)* np.sum((y-mean)**2)
 
 
 def MSE(y, ytilde):
