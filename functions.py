@@ -132,7 +132,6 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False):
 
     return r2_out/k, mse_out/k, r2_in/k, mse_in/k, bias/k, variance/k
 
-#heiheihei
 
 def confidence_interval(design, sigma, confidence, _lambda=0):
     inverse_term   = np.linalg.inv(design.T.dot(design)+ _lambda*np.eye((design.shape[1])))
