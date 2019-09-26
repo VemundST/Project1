@@ -1,6 +1,7 @@
 ## Functions
 import numpy as np
 from scipy.stats import t
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 def FrankeFunction(x, y, noise_level=0):
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
@@ -99,7 +100,7 @@ def reshaper(k, data):
     return np.asarray(output)
 
 
-def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False):
+def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=False):
     mask = np.arange(indata.shape[0])
     if shuffle:
         np.random.shuffle(mask)
@@ -113,19 +114,25 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False):
     variance = 0
     for i in range(k):
         tmp_design = design[np.arange(len(design))!=i]      # Featch all but the i-th element
-        #tmp_design = tmp_design.reshape(tmp_design.shape[0]*tmp_design.shape[1], tmp_design.shape[2]) #reshape from 3D to 2D matrix
         tmp_design=np.concatenate(tmp_design,axis=0)
         tmp_data = data[np.arange(len(data))!=i]
-        #tmp_data = tmp_data.reshape(tmp_data.shape[0]*tmp_data.shape[1])    # reshape from 2D to 1D
         tmp_data = np.concatenate(tmp_data,axis=0)
         if _lambda != 0:
             beta, pred = predictor(tmp_design, tmp_data, design[i], _lambda)
         else:
             beta, pred = predictor(tmp_design, tmp_data, design[i])
-        r2_out += R2Score(data[i], pred)
-        r2_in +=R2Score(tmp_data,tmp_design @ beta)
-        mse_out += MSE(data[i], pred)
-        mse_in += MSE(tmp_data,tmp_design @ beta)
+
+        if scikit:
+            r2_out += r2_score(data[i], pred)
+            r2_in += r2_score(tmp_data,tmp_design @ beta)
+            mse_out += mean_squared_error(data[i], pred)
+            mse_in += mean_squared_error(tmp_data,tmp_design @ beta)
+        else:
+            r2_out += R2Score(data[i], pred)
+            r2_in +=R2Score(tmp_data,tmp_design @ beta)
+            mse_out += MSE(data[i], pred)
+            mse_in += MSE(tmp_data,tmp_design @ beta)
+
 
         bias += np.mean((data[i]-np.mean(pred))**2)
         variance += np.mean((pred-np.mean(pred))**2)
