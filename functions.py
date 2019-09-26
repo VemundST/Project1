@@ -19,13 +19,6 @@ def OridinaryLeastSquares(design, data, test):
     return beta, pred
 
 
-def OridinaryLeastSquares_SVD(design, data, test):
-    U,_sigma,V     = np.linalg.svd(design.T.dot(design))
-    inverse_term   = 23
-    beta           = inverse_term.dot(design.T).dot(data)
-    pred           = test @ beta
-    return beta, pred
-
 
 def RidgeRegression(design, data, test, _lambda=0):
     inverse_term   = np.linalg.inv(design.T.dot(design)+ _lambda*np.eye((design.shape[1])))
@@ -113,28 +106,33 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=F
     bias = 0
     variance = 0
     for i in range(k):
-        tmp_design = design[np.arange(len(design))!=i]      # Featch all but the i-th element
-        tmp_design=np.concatenate(tmp_design,axis=0)
-        tmp_data = data[np.arange(len(data))!=i]
-        tmp_data = np.concatenate(tmp_data,axis=0)
+        train_design = design[np.arange(len(design))!=i]      # Featch all but the i-th element
+        train_design = np.concatenate(train_design,axis=0)
+        train_data   = data[np.arange(len(data))!=i]
+        train_data   = np.concatenate(train_data,axis=0)
+        test_design  = design[i]
+        test_data    = data[i]
+
+
+
         if _lambda != 0:
-            beta, pred = predictor(tmp_design, tmp_data, design[i], _lambda)
+            beta, pred = predictor(train_design, train_data, test_design, _lambda)
         else:
-            beta, pred = predictor(tmp_design, tmp_data, design[i])
+            beta, pred = predictor(train_design, train_data, test_design)
 
         if scikit:
-            r2_out += r2_score(data[i], pred)
-            r2_in += r2_score(tmp_data,tmp_design @ beta)
-            mse_out += mean_squared_error(data[i], pred)
-            mse_in += mean_squared_error(tmp_data,tmp_design @ beta)
+            r2_out += r2_score(test_data, pred)
+            r2_in += r2_score(train_data,train_design @ beta)
+            mse_out += mean_squared_error(test_data, pred)
+            mse_in += mean_squared_error(train_data,train_design @ beta)
         else:
-            r2_out += R2Score(data[i], pred)
-            r2_in +=R2Score(tmp_data,tmp_design @ beta)
-            mse_out += MSE(data[i], pred)
-            mse_in += MSE(tmp_data,tmp_design @ beta)
+            r2_out += R2Score(test_data, pred)
+            r2_in +=R2Score(train_data,train_design @ beta)
+            mse_out += MSE(test_data, pred)
+            mse_in += MSE(train_data,train_design @ beta)
 
 
-        bias += np.mean((data[i]-np.mean(pred))**2)
+        bias += np.mean((test_data-np.mean(pred))**2)
         variance += np.mean((pred-np.mean(pred))**2)
 
     return r2_out/k, mse_out/k, r2_in/k, mse_in/k, bias/k, variance/k
