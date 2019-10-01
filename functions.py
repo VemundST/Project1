@@ -133,10 +133,10 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=F
             mse_in += MSE(train_data,train_design @ beta)
 
 
-        bias += np.mean((test_data-np.mean(pred))**2)
-        variance += np.mean((pred-np.mean(pred))**2)
+        #bias += np.mean((test_data-np.mean(pred))**2)
+        #variance += np.mean((pred-np.mean(pred))**2)
 
-    return r2_out/k, mse_out/k, r2_in/k, mse_in/k, bias/k, variance/k
+    return r2_out/k, mse_out/k, r2_in/k, mse_in/k, #bias/k, variance/k
 
 
 def confidence_interval(design, sigma, confidence, _lambda=0):
