@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import t
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from scipy.stats import norm
+from sklearn.model_selection import train_test_split
 
 def FrankeFunction(x, y, noise_level=0):
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
@@ -141,10 +142,49 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=F
 
 def confidence_interval(design, sigma, confidence, _lambda=0):
     inverse_term   = np.linalg.inv(design.T.dot(design))
-    if _lambda=0:
-        variance_mat   = inverse_term*sigma**2
+    if _lambda != 0:
+        I=np.eye(inverse_term.shape[0])
+        variance_mat   = sigma**2*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
     else:
-        var_beta_ridge= sigma**2*(inverse_term + lambdas*I)*(inverse_term)*np.transpose(inverse_term + lambdas*I)
+        variance_mat   = inverse_term*sigma**2
     standard_dev   = np.sqrt(np.diag(variance_mat))
-    #standard_dev*t.ppf( (1+confidence)/2 , np.shape(design)[0] -1 )
     return standard_dev*norm.ppf(confidence+(1-confidence)/2)
+
+
+def N_bootstraps(data, model,predictor,n,_lambda=0,test_size=0.2):
+    design_train, design_test, data_train, data_test = train_test_split(model, data, test_size=test_size)
+    prediction = np.empty((data_test.shape[0], n))
+    data_test=data_test.reshape(data_test.shape[0],1)
+    if _lambda != 0:
+
+        for i in range(n):
+            design_resamp,data_resamp = bootstrap(design_train, data_train, i)
+            beta, prediction[:,i] = predictor(design_resamp,data_resamp, design_test, _lambda)
+    else:
+        for i in range(n):
+            design_resamp,data_resamp = bootstrap(design_train, data_train, i)
+            beta, prediction[:,i] = predictor(design_resamp,data_resamp, design_test)
+
+    mse = (np.mean(np.mean((data_test - prediction) ** 2, axis=1, keepdims=True)))
+    bias = np.mean((data_test - np.mean(prediction, axis=1, keepdims=True)) ** 2)
+    variance = np.mean(np.var(prediction, axis=1, keepdims=True))
+
+    return mse, bias, variance
+
+
+
+def bootstrap(X, z, random_state):
+
+    # For random randint
+    rgen = np.random.RandomState(random_state)
+
+    nrows, ncols = np.shape(X)
+
+    selected_rows = np.random.randint(
+        low=0, high=nrows, size=nrows
+    )
+
+    z_subset = z[selected_rows]
+    X_subset = X[selected_rows, :]
+
+    return X_subset, z_subset
