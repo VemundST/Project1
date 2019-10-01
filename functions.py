@@ -2,6 +2,7 @@
 import numpy as np
 from scipy.stats import t
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from scipy.stats import norm
 
 def FrankeFunction(x, y, noise_level=0):
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
@@ -139,7 +140,11 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=F
 
 
 def confidence_interval(design, sigma, confidence, _lambda=0):
-    inverse_term   = np.linalg.inv(design.T.dot(design)+ _lambda*np.eye((design.shape[1])))
-    variance_mat   = inverse_term*sigma**2
+    inverse_term   = np.linalg.inv(design.T.dot(design))
+    if _lambda=0:
+        variance_mat   = inverse_term*sigma**2
+    else:
+        var_beta_ridge= sigma**2*(inverse_term + lambdas*I)*(inverse_term)*np.transpose(inverse_term + lambdas*I)
     standard_dev   = np.sqrt(np.diag(variance_mat))
-    return standard_dev*t.ppf( (1+confidence)/2 , np.shape(design)[0] -1 )
+    #standard_dev*t.ppf( (1+confidence)/2 , np.shape(design)[0] -1 )
+    return standard_dev*norm.ppf(confidence+(1-confidence)/2)
