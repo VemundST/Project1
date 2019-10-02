@@ -4,6 +4,7 @@ from scipy.stats import t
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from scipy.stats import norm
 from sklearn.model_selection import train_test_split
+import scipy.linalg as scl
 
 def FrankeFunction(x, y, noise_level=0):
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
@@ -20,6 +21,10 @@ def OridinaryLeastSquares(design, data, test):
     pred           = test @ beta
     return beta, pred
 
+def ols_svd(design, data, test):
+    u, s, v = scl.svd(design)
+    beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ z
+    return beta, test @ beta
 
 
 def RidgeRegression(design, data, test, _lambda=0):
