@@ -155,6 +155,22 @@ def confidence_interval(design, sigma, confidence, _lambda=0):
     standard_dev   = np.sqrt(np.diag(variance_mat))
     return standard_dev*norm.ppf(confidence+(1-confidence)/2)
 
+def confidence_interval_est_sigma(design, confidence, data, prediction, _lambda=0):
+    '''
+    As sigma is unknown it must be extracted from the data,
+    using equation below (it has no number) 3.8 from Hastie et al - Elements of statistical learning
+    '''
+    sigma_sqrd = MSE(data,prediction)/(design.shape[0] - design.shape[1] - 1)
+
+    inverse_term   = np.linalg.inv(design.T.dot(design))
+    if _lambda != 0:
+        I=np.eye(inverse_term.shape[0])
+        variance_mat   = sigma**2*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
+    else:
+        variance_mat   = inverse_term*sigma**2
+    standard_dev   = np.sqrt(np.diag(variance_mat))
+    return standard_dev*norm.ppf(confidence+(1-confidence)/2)
+
 
 def N_bootstraps(data, model,predictor,n,_lambda=0,test_size=0.2):
     design_train, design_test, data_train, data_test = train_test_split(model, data, test_size=test_size)
