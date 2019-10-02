@@ -165,9 +165,9 @@ def confidence_interval_est_sigma(design, confidence, data, prediction, _lambda=
     inverse_term   = np.linalg.inv(design.T.dot(design))
     if _lambda != 0:
         I=np.eye(inverse_term.shape[0])
-        variance_mat   = sigma**2*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
+        variance_mat   = sigma_sqrd*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
     else:
-        variance_mat   = inverse_term*sigma**2
+        variance_mat   = inverse_term*sigma_sqrd
     standard_dev   = np.sqrt(np.diag(variance_mat))
     return standard_dev*norm.ppf(confidence+(1-confidence)/2)
 
