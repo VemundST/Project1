@@ -21,10 +21,6 @@ def OridinaryLeastSquares(design, data, test):
     pred           = test @ beta
     return beta, pred
 
-def ols_svd(design, data, test):
-    u, s, v = scl.svd(design)
-    beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ z
-    return beta, test @ beta
 
 
 def RidgeRegression(design, data, test, _lambda=0):
@@ -45,8 +41,7 @@ def MSE(y, ytilde):
 
 
 def R2Score(y, ytilde):
-    return 1 - ((np.sum((y-ytilde)**2))/(np.sum((y-((np.sum(y))/y.size))**2)))
-
+    return 1 - np.sum((y - ytilde) ** 2) / np.sum((y - np.mean(ytilde)) ** 2)
 
 def MAE(y, ytilde):
     return (np.sum(np.abs(y-ytilde)))/y.size
