@@ -22,8 +22,9 @@ def OridinaryLeastSquares(design, data, test):
     return beta, pred
 
 def ols_svd(design, data, test):
-    u, s, v = scl.svd(design)
-    beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ z
+    #u, s, v = scl.svd(design)
+    u, s, v = np.linalg.svd(design)
+    beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ data
     return beta, test @ beta
 
 def RidgeRegression(design, data, test, _lambda=0):
@@ -54,7 +55,7 @@ def MSLE(y, ytilde):
     return (np.sum((np.log(1+y)  -  np.log(1+ytilde))**2))/y.size
 
 
-def DesignDesign(x, y, power):
+def DesignDesign(x, y, power,ravel=False):
     '''
     This function employs the underlying pattern governing a design matrix
     on the form [1,x,y,x**2,x*y,y**2,x**3,(x**2)*y,x*(y**2),y**3 ....]
@@ -76,10 +77,16 @@ def DesignDesign(x, y, power):
     concat_x     = concat_x[1:len(concat_x)]
     concat_y     = concat_y[1:len(concat_y)]
 
-    X,Y          = np.meshgrid(x,y)
-    X            = np.ravel(X)
-    Y            = np.ravel(Y)
+    if ravel:
+        X = x
+        Y = y
+    else:
+        X,Y          = np.meshgrid(x,y)
+        X            = np.ravel(X)
+        Y            = np.ravel(Y)
+
     DesignMatrix = np.empty((len(X),len(concat_x)))
+
     for i in range(len(concat_x)):
         DesignMatrix[:,i]   = (X**concat_x[i])*(Y**concat_y[i])
 
