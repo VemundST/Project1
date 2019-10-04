@@ -154,7 +154,7 @@ def confidence_interval(design, sigma, confidence, _lambda=0):
     inverse_term   = np.linalg.inv(design.T.dot(design))
     if _lambda != 0:
         I=np.eye(inverse_term.shape[0])
-        variance_mat   = sigma**2*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
+        variance_mat   = sigma**2*(inverse_term + _lambda*I)*(design.T.dot(design))*np.transpose(inverse_term + _lambda*I)
     else:
         variance_mat   = inverse_term*sigma**2
     standard_dev   = np.sqrt(np.diag(variance_mat))
