@@ -21,7 +21,10 @@ def OridinaryLeastSquares(design, data, test):
     pred           = test @ beta
     return beta, pred
 
-
+def ols_svd(design, data, test):
+    u, s, v = scl.svd(design)
+    beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ z
+    return beta, test @ beta
 
 def RidgeRegression(design, data, test, _lambda=0):
     inverse_term   = np.linalg.inv(design.T.dot(design)+ _lambda*np.eye((design.shape[1])))
