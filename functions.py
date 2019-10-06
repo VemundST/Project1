@@ -6,6 +6,8 @@ from scipy.stats import norm
 from sklearn.model_selection import train_test_split
 import scipy.linalg as scl
 
+
+''' Franke Function and Design Matrix '''
 def FrankeFunction(x, y, noise_level=0):
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
     term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
@@ -13,46 +15,6 @@ def FrankeFunction(x, y, noise_level=0):
     term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
     noise = noise_level*np.random.randn(len(x),len(y))
     return term1 + term2 + term3 + term4 + noise
-
-
-def OridinaryLeastSquares(design, data, test):
-    inverse_term   = np.linalg.inv(design.T.dot(design))
-    beta           = inverse_term.dot(design.T).dot(data)
-    pred           = test @ beta
-    return beta, pred
-
-def ols_svd(design, data, test):
-    #u, s, v = scl.svd(design)
-    u, s, v = np.linalg.svd(design)
-    beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ data
-    return beta, test @ beta
-
-def RidgeRegression(design, data, test, _lambda=0):
-    inverse_term   = np.linalg.inv(design.T.dot(design)+ _lambda*np.eye((design.shape[1])))
-    beta           = inverse_term.dot(design.T).dot(data)
-    pred           = test @ beta
-    return beta, pred
-
-
-def VarianceBeta(y, n):
-    n = np.size(y)
-    mean = (1/n ) * np.sum(y)
-    return (1/n)* np.sum((y-mean)**2)
-
-
-def MSE(y, ytilde):
-    return (np.sum((y-ytilde)**2))/y.size
-
-
-def R2Score(y, ytilde):
-    return 1 - np.sum((y - ytilde) ** 2) / np.sum((y - np.mean(ytilde)) ** 2)
-
-def MAE(y, ytilde):
-    return (np.sum(np.abs(y-ytilde)))/y.size
-
-
-def MSLE(y, ytilde):
-    return (np.sum((np.log(1+y)  -  np.log(1+ytilde))**2))/y.size
 
 
 def DesignDesign(x, y, power,ravel=False):
@@ -84,15 +46,80 @@ def DesignDesign(x, y, power,ravel=False):
         X,Y          = np.meshgrid(x,y)
         X            = np.ravel(X)
         Y            = np.ravel(Y)
-
     DesignMatrix = np.empty((len(X),len(concat_x)))
-
     for i in range(len(concat_x)):
         DesignMatrix[:,i]   = (X**concat_x[i])*(Y**concat_y[i])
-
-    #DesignMatrix = np.concatenate((np.ones((len(X),1)),DesignMatrix), axis = 1)
     return DesignMatrix
 
+
+''' Regression Algorithms'''
+def OridinaryLeastSquares(design, data, test):
+    inverse_term   = np.linalg.inv(design.T.dot(design))
+    beta           = inverse_term.dot(design.T).dot(data)
+    pred           = test @ beta
+    return beta, pred
+
+def ols_svd(design, data, test):
+    u, s, v = np.linalg.svd(design)
+    beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ data
+    return beta, test @ beta
+
+def RidgeRegression(design, data, test, _lambda=0):
+    inverse_term   = np.linalg.inv(design.T.dot(design)+ _lambda*np.eye((design.shape[1])))
+    beta           = inverse_term.dot(design.T).dot(data)
+    pred           = test @ beta
+    return beta, pred
+
+''' Error Metrics'''
+def VarianceBeta(y, n):
+    n = np.size(y)
+    mean = (1/n ) * np.sum(y)
+    return (1/n)* np.sum((y-mean)**2)
+
+
+def MSE(y, ytilde):
+    return (np.sum((y-ytilde)**2))/y.size
+
+
+def R2Score(y, ytilde):
+    return 1 - np.sum((y - ytilde) ** 2) / np.sum((y - np.mean(ytilde)) ** 2)
+
+def MAE(y, ytilde):
+    return (np.sum(np.abs(y-ytilde)))/y.size
+
+
+def MSLE(y, ytilde):
+    return (np.sum((np.log(1+y)  -  np.log(1+ytilde))**2))/y.size
+
+def confidence_interval(design, sigma, confidence, _lambda=0):
+    inverse_term   = np.linalg.inv(design.T.dot(design))
+    if _lambda != 0:
+        I=np.eye(inverse_term.shape[0])
+        variance_mat   = sigma**2*(inverse_term + _lambda*I)*(design.T.dot(design))*np.transpose(inverse_term + _lambda*I)
+    else:
+        variance_mat   = inverse_term*sigma**2
+    standard_dev   = np.sqrt(np.diag(variance_mat))
+    return standard_dev*norm.ppf(confidence+(1-confidence)/2)
+
+def confidence_interval_est_sigma(design, confidence, data, prediction, _lambda=0):
+    '''
+    As sigma is unknown it must be extracted from the data,
+    using equation below (it has no number) 3.8 from Hastie et al - Elements of statistical learning
+    '''
+    sigma_sqrd = MSE(data,prediction)/(design.shape[0] - design.shape[1] - 1)
+
+    inverse_term   = np.linalg.inv(design.T.dot(design))
+    if _lambda != 0:
+        I=np.eye(inverse_term.shape[0])
+        variance_mat   = sigma_sqrd*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
+    else:
+        variance_mat   = inverse_term*sigma_sqrd
+    standard_dev   = np.sqrt(np.diag(variance_mat))
+    return standard_dev*norm.ppf(confidence+(1-confidence)/2)
+
+
+
+''' Resampling methods'''
 
 def reshaper(k, data):
     output = []
@@ -143,38 +170,10 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=F
             mse_out += MSE(test_data, pred)
             mse_in += MSE(train_data,train_design @ beta)
 
-
-        #bias += np.mean((test_data-np.mean(pred))**2)
-        #variance += np.mean((pred-np.mean(pred))**2)
-
-    return r2_out/k, mse_out/k, r2_in/k, mse_in/k, #bias/k, variance/k
+    return r2_out/k, mse_out/k, r2_in/k, mse_in/k
 
 
-def confidence_interval(design, sigma, confidence, _lambda=0):
-    inverse_term   = np.linalg.inv(design.T.dot(design))
-    if _lambda != 0:
-        I=np.eye(inverse_term.shape[0])
-        variance_mat   = sigma**2*(inverse_term + _lambda*I)*(design.T.dot(design))*np.transpose(inverse_term + _lambda*I)
-    else:
-        variance_mat   = inverse_term*sigma**2
-    standard_dev   = np.sqrt(np.diag(variance_mat))
-    return standard_dev*norm.ppf(confidence+(1-confidence)/2)
 
-def confidence_interval_est_sigma(design, confidence, data, prediction, _lambda=0):
-    '''
-    As sigma is unknown it must be extracted from the data,
-    using equation below (it has no number) 3.8 from Hastie et al - Elements of statistical learning
-    '''
-    sigma_sqrd = MSE(data,prediction)/(design.shape[0] - design.shape[1] - 1)
-
-    inverse_term   = np.linalg.inv(design.T.dot(design))
-    if _lambda != 0:
-        I=np.eye(inverse_term.shape[0])
-        variance_mat   = sigma_sqrd*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
-    else:
-        variance_mat   = inverse_term*sigma_sqrd
-    standard_dev   = np.sqrt(np.diag(variance_mat))
-    return standard_dev*norm.ppf(confidence+(1-confidence)/2)
 
 
 def N_bootstraps(data, model,predictor,n,_lambda=0,test_size=0.2):
