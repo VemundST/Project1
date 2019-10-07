@@ -22,5 +22,6 @@ The jupyter notebook main.ipynb is used for running the codes in functions.py.
 The jupyter notebook test.ipynb is used for benchmarking the regression functions.
 
 The folder /figures includes all the plots that is included in the written report, with addition to some extra figures.
-
+The file SRTM_data_Norway_1.tif is the digital terrain dataset.
 The PDF file Project1_AT_VST_SMT.pdf is the written report.
+
