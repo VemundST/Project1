@@ -9,6 +9,12 @@ import scipy.linalg as scl
 
 ''' Franke Function and Design Matrix '''
 def FrankeFunction(x, y, noise_level=0):
+    '''
+    Usage: Computes the Franke function with user defined spatial paramters and noise
+    Input:  x,y = meshgrid of spatial vectors
+            noise_level = scalar value
+    Output: Franke function = matrix of size [x]
+    '''
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
     term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
     term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
@@ -24,6 +30,12 @@ def DesignDesign(x, y, power,ravel=False):
 
     x_power=[0,1,0,2,1,0,3,2,1,0,4,3,2,1,0,...,n,n-1,...,1,0]
     y_power=[0,0,1,0,1,2,0,1,2,3,0,1,2,3,4,...,0,1,...,n-1,n]
+
+    input:  x,y = 1D spatial vectors, or raveled mesh if ravel=True
+            power = polynomial degree
+            ravel = False (input vectors will not be meshed and raveled)
+                  = True (input vecotors wil be kept as is)
+    output: DesignMatrix = The design matrix
     '''
 
     concat_x   = np.array([0,0])
@@ -54,44 +66,79 @@ def DesignDesign(x, y, power,ravel=False):
 
 ''' Regression Algorithms'''
 def OridinaryLeastSquares(design, data, test):
+    '''
+    Usage: Performs OLS  regression employing matrix inversion
+    input:  design = user defined design matrix
+            data = training data
+            test = test design matrix (can be equal to design if no splitting)
+    output: beta = beta parameters
+            pred = prediction
+    '''
     inverse_term   = np.linalg.inv(design.T.dot(design))
     beta           = inverse_term.dot(design.T).dot(data)
     pred           = test @ beta
     return beta, pred
 
 def ols_svd(design, data, test):
+        '''
+        Usage: Performs OLS regression employing SVD
+        input:  design = user defined design matrix
+                data = training data
+                test = test design matrix (can be equal to design if no splitting)
+        output: beta = beta parameters
+                pred = prediction
+        '''
     u, s, v = np.linalg.svd(design)
     beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ data
     return beta, test @ beta
 
 def RidgeRegression(design, data, test, _lambda=0):
+    '''
+    Usage: Performs Ridge regression employing matrix inversion
+    input:  design = user defined design matrix
+            data = training data
+            test = test design matrix (can be equal to design if no splitting)
+            _lambda = hyperparameter/penalty paramter/tuning parameter
+    output: beta = beta parameters
+            pred = prediction
+    '''
     inverse_term   = np.linalg.inv(design.T.dot(design)+ _lambda*np.eye((design.shape[1])))
     beta           = inverse_term.dot(design.T).dot(data)
     pred           = test @ beta
     return beta, pred
 
 ''' Error Metrics'''
-def VarianceBeta(y, n):
-    n = np.size(y)
-    mean = (1/n ) * np.sum(y)
-    return (1/n)* np.sum((y-mean)**2)
-
 
 def MSE(y, ytilde):
+    '''
+    Usage: calculates the Mean Squared Error
+    Input:  y = observed data
+            ytilde = predicted data
+    output: Mean Squared Error
+    '''
     return (np.sum((y-ytilde)**2))/y.size
 
 
 def R2Score(y, ytilde):
+    '''
+    Usage: calculates the R2-score
+    Input:  y = observed data
+            ytilde = predicted data
+    output: R2score
+    '''
     return 1 - np.sum((y - ytilde) ** 2) / np.sum((y - np.mean(ytilde)) ** 2)
 
-def MAE(y, ytilde):
-    return (np.sum(np.abs(y-ytilde)))/y.size
-
-
-def MSLE(y, ytilde):
-    return (np.sum((np.log(1+y)  -  np.log(1+ytilde))**2))/y.size
 
 def confidence_interval(design, sigma, confidence, _lambda=0):
+    '''
+    Usage: calculates the confidence interval for OLS and Lasso if noise is known
+    Input:  design = user defined design matrix
+            sigma = a-priori known noise level
+            confidence = 0.95 = 95 perecent confidence level
+            _lambda = if lambda = 0, calculates confidence for OLS
+                      if lambda ~=0, calculates confidence for Ridge
+    output: Confidence interval for all beta values.
+    '''
     if _lambda != 0:
         I=np.eye(design.shape[1])
         inverse_term   = np.linalg.inv(design.T.dot(design) + _lambda*I)
@@ -103,27 +150,16 @@ def confidence_interval(design, sigma, confidence, _lambda=0):
     standard_dev   = np.sqrt(np.diag(variance_mat))
     return standard_dev*norm.ppf(confidence+(1-confidence)/2)
 
-def confidence_interval_est_sigma(design, confidence, data, prediction, _lambda=0):
-    '''
-    As sigma is unknown it must be extracted from the data,
-    using equation below (it has no number) 3.8 from Hastie et al - Elements of statistical learning
-    '''
-    sigma_sqrd = MSE(data,prediction)/(design.shape[0] - design.shape[1] - 1)
-
-    inverse_term   = np.linalg.inv(design.T.dot(design))
-    if _lambda != 0:
-        I=np.eye(inverse_term.shape[0])
-        variance_mat   = sigma_sqrd*(inverse_term + _lambda*I)*(inverse_term)*np.transpose(inverse_term + _lambda*I)
-    else:
-        variance_mat   = inverse_term*sigma_sqrd
-    standard_dev   = np.sqrt(np.diag(variance_mat))
-    return standard_dev*norm.ppf(confidence+(1-confidence)/2)
-
-
 
 ''' Resampling methods'''
 
 def reshaper(k, data):
+    '''
+    Usage: Manages the data for k_fold_cv
+    Input: k = number of folds
+           data = shuffled input data or input design matrix
+    output: Splitted data
+    '''
     output = []
     j = int(np.ceil(len(data)/k))
     for i in range(k):
@@ -134,7 +170,22 @@ def reshaper(k, data):
     return np.asarray(output)
 
 
-def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=False):
+def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False):
+
+    '''
+    Usage: k-fold cross validation employing either RidgeRegression, OridinaryLeastSquares or ols_svd
+    Input: k = number of folds
+           indata = datapoints
+           indesign = user defined design matrix
+           predictor = RidgeRegression, OridinaryLeastSquares or ols_svd
+           _lambda = hyperparameter/penalty paramter/tuning parameter for RidgeRegression
+           shuffle = False, input data will not be shuffled
+                     True, input data will be shuffled
+    output: r2_out/k = averaged out sample R2-score
+            mse_out/k = averaged out sample MSE
+            r2_in/k = averaged in sample R2-Score
+            mse_in/k = averaged in sample MSE
+    '''
     mask = np.arange(indata.shape[0])
     if shuffle:
         np.random.shuffle(mask)
@@ -154,23 +205,15 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=F
         test_design  = design[i]
         test_data    = data[i]
 
-
-
         if _lambda != 0:
             beta, pred = predictor(train_design, train_data, test_design, _lambda)
         else:
             beta, pred = predictor(train_design, train_data, test_design)
 
-        if scikit:
-            r2_out += r2_score(test_data, pred)
-            r2_in += r2_score(train_data,train_design @ beta)
-            mse_out += mean_squared_error(test_data, pred)
-            mse_in += mean_squared_error(train_data,train_design @ beta)
-        else:
-            r2_out += R2Score(test_data, pred)
-            r2_in +=R2Score(train_data,train_design @ beta)
-            mse_out += MSE(test_data, pred)
-            mse_in += MSE(train_data,train_design @ beta)
+        r2_out += R2Score(test_data, pred)
+        r2_in +=R2Score(train_data,train_design @ beta)
+        mse_out += MSE(test_data, pred)
+        mse_in += MSE(train_data,train_design @ beta)
 
     return r2_out/k, mse_out/k, r2_in/k, mse_in/k
 
@@ -178,8 +221,20 @@ def k_fold_cv(k, indata, indesign, predictor, _lambda=0, shuffle=False, scikit=F
 
 
 
-def N_bootstraps(data, model,predictor,n,_lambda=0,test_size=0.2):
-    design_train, design_test, data_train, data_test = train_test_split(model, data, test_size=test_size)
+def N_bootstraps(data, design,predictor,n,_lambda=0,test_size=0.2):
+    '''
+    Usage: Bootstrap resampling for bias-varaince tradeoff analysis.
+    Input: data = input data
+           design = user defined design matrix
+           predictor = RidgeRegression, OridinaryLeastSquares or ols_svd
+           n = number of bootstraps
+           _lambda = hyperparameter/penalty paramter/tuning parameter for RidgeRegression
+           test_size = amount of input data held out of bootstrapping.
+    output: mse = MSE averaged over n bootstraps
+            bias = bias averaged over n bootstraps
+            variance = variance averaged over n bootstraps
+    '''
+    design_train, design_test, data_train, data_test = train_test_split(design, data, test_size=test_size)
     prediction = np.empty((data_test.shape[0], n))
     data_test=data_test.reshape(data_test.shape[0],1)
     if _lambda != 0:
@@ -200,18 +255,26 @@ def N_bootstraps(data, model,predictor,n,_lambda=0,test_size=0.2):
 
 
 
-def bootstrap(X, z, random_state):
+def bootstrap(design, data, random_state):
+    '''
+    Usage: Single bootstrap resampling
+    Input: design = user defined design matrix
+           data = input data
+    output: design_subset = bootstrap resampled design matrix
+            data_subset = bootstrap resampled data
+    '''
+
 
     # For random randint
     rgen = np.random.RandomState(random_state)
 
-    nrows, ncols = np.shape(X)
+    nrows, ncols = np.shape(design)
 
     selected_rows = np.random.randint(
         low=0, high=nrows, size=nrows
     )
 
-    z_subset = z[selected_rows]
-    X_subset = X[selected_rows, :]
+    data_subset = data[selected_rows]
+    design_subset = design[selected_rows, :]
 
-    return X_subset, z_subset
+    return design_subset, data_subset
