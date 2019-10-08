@@ -80,14 +80,14 @@ def OridinaryLeastSquares(design, data, test):
     return beta, pred
 
 def ols_svd(design, data, test):
-        '''
-        Usage: Performs OLS regression employing SVD
-        input:  design = user defined design matrix
-                data = training data
-                test = test design matrix (can be equal to design if no splitting)
-        output: beta = beta parameters
-                pred = prediction
-        '''
+    '''
+    Usage: Performs OLS regression employing SVD
+    input:  design = user defined design matrix
+            data = training data
+            test = test design matrix (can be equal to design if no splitting)
+    output: beta = beta parameters
+            pred = prediction
+    '''
     u, s, v = np.linalg.svd(design)
     beta = v.T @ scl.pinv(scl.diagsvd(s, u.shape[0], v.shape[0])) @ u.T @ data
     return beta, test @ beta
